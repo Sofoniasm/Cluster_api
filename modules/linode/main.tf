@@ -1,5 +1,29 @@
+terraform {
+  required_providers {
+    linode = {
+      source = "linode/linode"
+    }
+    random = {
+      source = "hashicorp/random"
+    }
+  }
+}
+
 # Minimal Linode (Akamai) infra scaffold for Cluster API (experimental)
 # Provider: https://registry.terraform.io/providers/linode/linode/latest
+
+terraform {
+  required_providers {
+    linode = {
+      source  = "linode/linode"
+      version = ">=2.30"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">=3.5"
+    }
+  }
+}
 
 variable "region" { default = "us-east" }
 variable "label_prefix" { default = "capi" }
@@ -10,7 +34,7 @@ resource "random_pet" "suffix" {}
 variable "ssh_public_key" { default = "" }
 
 resource "linode_sshkey" "capi" {
-  count      = length(var.ssh_public_key) > 0 ? 1 : 0
+  count      = var.ssh_public_key != "" ? 1 : 0
   label      = "${var.label_prefix}-${random_pet.suffix.id}-key"
   ssh_key    = var.ssh_public_key
 }
@@ -20,4 +44,6 @@ resource "linode_sshkey" "capi" {
 locals { tag = "${var.label_prefix}-${random_pet.suffix.id}" }
 
 output "tag" { value = local.tag }
-output "ssh_key_label" { value = linode_sshkey.capi[0].label if length(linode_sshkey.capi) > 0 }
+output "ssh_key_label" {
+  value = length(linode_sshkey.capi) > 0 ? linode_sshkey.capi[0].label : null
+}

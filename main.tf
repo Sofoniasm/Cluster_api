@@ -39,27 +39,29 @@ module "aws" {
 }
 
 module "gcp" {
-  source      = "./modules/gcp"
-  count       = var.enable_gcp ? 1 : 0
-  project     = var.gcp_project
-  region      = var.gcp_region
+  source       = "./modules/gcp"
+  count        = var.enable_gcp ? 1 : 0
+  project      = var.gcp_project
+  region       = var.gcp_region
   network_cidr = var.gcp_network_cidr
   subnet_cidr  = var.gcp_subnet_cidr
-  depends_on  = [null_resource.kind]
+  depends_on   = [null_resource.kind]
 }
 
-module "linode" {
-  source      = "./modules/linode"
-  count       = var.enable_linode ? 1 : 0
-  region      = var.linode_region
-  label_prefix = var.linode_label_prefix
-  ssh_public_key = var.linode_ssh_public_key
-  depends_on  = [null_resource.kind]
-}
+
+## Linode module temporarily disabled to unblock init; re-enable once provider parser issues resolved
+# module "linode" {
+#   source      = "./modules/linode"
+#   count       = var.enable_linode ? 1 : 0
+#   region      = var.linode_region
+#   label_prefix = var.linode_label_prefix
+#   ssh_public_key = var.linode_ssh_public_key
+#   depends_on  = [null_resource.kind]
+# }
 
 # Initialize cluster-api providers after modules. We use one resource that depends on all.
 resource "null_resource" "clusterctl_init_azure" {
-  count = var.enable_azure ? 1 : 0
+  count = var.enable_azure && var.bootstrap_kind ? 1 : 0
   depends_on = [null_resource.kind, module.azure]
   provisioner "local-exec" {
     command = <<EOT
@@ -72,7 +74,7 @@ EOT
 }
 
 resource "null_resource" "clusterctl_init_aws" {
-  count = var.enable_aws ? 1 : 0
+  count = var.enable_aws && var.bootstrap_kind ? 1 : 0
   depends_on = [null_resource.kind, module.aws]
   provisioner "local-exec" {
     command = <<EOT
@@ -85,35 +87,37 @@ EOT
 }
 
 resource "null_resource" "clusterctl_init_gcp" {
-  count = var.enable_gcp ? 1 : 0
+  count = var.enable_gcp && var.bootstrap_kind ? 1 : 0
   depends_on = [null_resource.kind, module.gcp]
   provisioner "local-exec" {
     command = <<EOT
 set -e
 kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig context invalid"; exit 1; }
-clusterctl init --infrastructure capg
+clusterctl init --infrastructure gcp
 EOT
     interpreter = ["bash", "-c"]
   }
 }
 
-resource "null_resource" "clusterctl_init_linode" {
-  count = var.enable_linode ? 1 : 0
-  depends_on = [null_resource.kind, module.linode]
-  provisioner "local-exec" {
-    command = <<EOT
-set -e
-kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig context invalid"; exit 1; }
-clusterctl init --infrastructure caplinode || clusterctl init --infrastructure linode || echo "Attempted Linode provider init (verify provider name)"
-EOT
-    interpreter = ["bash", "-c"]
-  }
-}
+
+## Linode clusterctl init disabled
+# resource "null_resource" "clusterctl_init_linode" {
+#   count = var.enable_linode && var.bootstrap_kind ? 1 : 0
+#   depends_on = [null_resource.kind, module.linode]
+#   provisioner "local-exec" {
+#     command = <<EOT
+# set -e
+# kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig context invalid"; exit 1; }
+# clusterctl init --infrastructure caplinode || clusterctl init --infrastructure linode || echo "Attempted Linode provider init (verify provider name)"
+# EOT
+#     interpreter = ["bash", "-c"]
+#   }
+# }
 
 # Optional: automatically create small sample workload clusters (one per enabled provider)
 resource "null_resource" "sample_workloads" {
-  count = var.auto_workload_examples ? 1 : 0
-  depends_on = [null_resource.clusterctl_init_azure, null_resource.clusterctl_init_aws, null_resource.clusterctl_init_gcp, null_resource.clusterctl_init_linode]
+  count = var.auto_workload_examples && var.bootstrap_kind ? 1 : 0
+  depends_on = [null_resource.clusterctl_init_azure, null_resource.clusterctl_init_aws, null_resource.clusterctl_init_gcp]
   provisioner "local-exec" {
     command = <<EOT
 set -e

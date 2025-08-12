@@ -1,0 +1,6 @@
+# Optional Google provider (only if enable_gcp=true)
+# Rename to providers_gcp.tf or merge into providers.tf when enabling GCP.
+provider "google" {
+  project = var.gcp_project
+  region  = var.gcp_region
+}

@@ -1,3 +1,15 @@
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">=5.0"
+    }
+    random = {
+      source = "hashicorp/random"
+    }
+  }
+}
+
 variable "project" { type = string }
 variable "region" { type = string }
 variable "network_cidr" { type = string }

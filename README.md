@@ -24,6 +24,24 @@ Minimal end‑to‑end steps to stand up Azure, AWS, GCP and Linode providers lo
 	- AWS: `AWS_OIDC_ROLE_ARN`.
 	- GCP: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT_EMAIL`, `GCP_PROJECT_ID`.
 	- Linode: `LINODE_TOKEN`.
+### Automated Secret Population (New)
+Use helper scripts to populate GitHub Secrets from current CLI sessions (requires `gh auth login`).
+
+Linux/macOS / Git Bash:
+```
+./scripts/set_github_secrets.sh --repo OWNER/REPO \
+	--azure-client-id <app-guid> \
+	--aws-oidc-role-arn arn:aws:iam::<acct>:role/capi-gh-oidc \
+	--gcp-wi-provider projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/github \
+	--gcp-sa-email capi-terraform@<project>.iam.gserviceaccount.com
+```
+
+PowerShell (Windows):
+```
+./scripts/set_github_secrets.ps1 -Repo OWNER/REPO -AzureClientId <guid> -AwsOidcRoleArn arn:aws:iam::<acct>:role/capi-gh-oidc -GcpWiProvider projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/github -GcpServiceAccountEmail capi-terraform@<project>.iam.gserviceaccount.com -GcpProjectId <project> -LinodeToken <pat>
+```
+Sets secrets:
+`AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AWS_OIDC_ROLE_ARN`, `GCP_PROJECT_ID`, `GCP_SERVICE_ACCOUNT_EMAIL`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `LINODE_TOKEN`.
 3. (Optional) Choose remote backend: copy a sample from `infra/backends/*` to `backend.tf` and edit names; then `terraform init -migrate-state`.
 4. Local: copy `.env.example` -> `.env`, set values, export env (or `source .env`), then:
 ```
