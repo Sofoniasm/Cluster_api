@@ -1,3 +1,45 @@
+#############################
+# Terraform
+#############################
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+tfplan
+
+#############################
+# Local CLI binaries / tools
+#############################
+clusterctl
+kind
+
+#############################
+# OS / Editor noise
+#############################
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.log
+.idea/
+.vscode/
+
+#############################
+# Node / Python (future-proof if added later)
+#############################
+node_modules/
+__pycache__/
+*.pyc
 # Local environment & secrets
 .env
 .gcp-sa.json
