@@ -1,0 +1,92 @@
+/* Simplified configuration without advanced expressions to satisfy basic parser */
+
+# Optional: create kind management cluster
+resource "null_resource" "kind" {
+  count = var.bootstrap_kind ? 1 : 0
+  triggers = {
+    name = var.kind_cluster_name
+  }
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+if ! command -v kind >/dev/null 2>&1; then
+  echo "kind not installed" >&2; exit 1
+fi
+if ! kubectl config get-clusters | grep -q "${var.kind_cluster_name}"; then
+  kind create cluster --name ${var.kind_cluster_name}
+fi
+kubectl config use-context kind-${var.kind_cluster_name}
+EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+
+module "azure" {
+  source        = "./modules/azure"
+  count         = var.enable_azure ? 1 : 0
+  location      = var.azure_location
+  vnet_cidr     = var.azure_vnet_cidr
+  subnet_cidr   = var.azure_subnet_cidr
+  depends_on    = [null_resource.kind]
+}
+
+module "aws" {
+  source      = "./modules/aws"
+  count       = var.enable_aws ? 1 : 0
+  region      = var.aws_region
+  vpc_cidr    = var.aws_vpc_cidr
+  depends_on  = [null_resource.kind]
+}
+
+module "gcp" {
+  source      = "./modules/gcp"
+  count       = var.enable_gcp ? 1 : 0
+  project     = var.gcp_project
+  region      = var.gcp_region
+  network_cidr = var.gcp_network_cidr
+  subnet_cidr  = var.gcp_subnet_cidr
+  depends_on  = [null_resource.kind]
+}
+
+# Initialize cluster-api providers after modules. We use one resource that depends on all.
+resource "null_resource" "clusterctl_init_azure" {
+  count = var.enable_azure ? 1 : 0
+  depends_on = [null_resource.kind, module.azure]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig context invalid"; exit 1; }
+clusterctl init --infrastructure capz
+EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+
+resource "null_resource" "clusterctl_init_aws" {
+  count = var.enable_aws ? 1 : 0
+  depends_on = [null_resource.kind, module.aws]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig context invalid"; exit 1; }
+clusterctl init --infrastructure capa
+EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+
+resource "null_resource" "clusterctl_init_gcp" {
+  count = var.enable_gcp ? 1 : 0
+  depends_on = [null_resource.kind, module.gcp]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig context invalid"; exit 1; }
+clusterctl init --infrastructure capg
+EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+output "azure_enabled" { value = var.enable_azure }
+output "aws_enabled" { value = var.enable_aws }
+output "gcp_enabled" { value = var.enable_gcp }
