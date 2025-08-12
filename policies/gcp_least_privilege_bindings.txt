@@ -1,0 +1,7 @@
+# GCP minimal roles (start point) for Cluster API operations
+# Replace <PROJECT_ID>
+# Service Account assumed via Workload Identity Federation
+
+roles/compute.admin
+roles/iam.serviceAccountUser
+# Consider restricting to more granular roles later (e.g., instanceAdmin.v1 + networkAdmin + securityAdmin)

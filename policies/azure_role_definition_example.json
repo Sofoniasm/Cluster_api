@@ -1,0 +1,15 @@
+{
+  "Name": "ClusterAPIContributorScoped",
+  "IsCustom": true,
+  "Description": "Scoped role for Cluster API minimal infra operations",
+  "Actions": [
+    "Microsoft.Network/virtualNetworks/*",
+    "Microsoft.Network/networkSecurityGroups/*",
+    "Microsoft.Compute/virtualMachines/*",
+    "Microsoft.Compute/disks/*",
+    "Microsoft.Resources/subscriptions/resourceGroups/*/read",
+    "Microsoft.Resources/deployments/*"
+  ],
+  "NotActions": [],
+  "AssignableScopes": ["/subscriptions/<SUBSCRIPTION_ID>"]
+}

@@ -12,12 +12,61 @@ A separate `kind` local bootstrap (optional) can create a local kind cluster as 
 
 > NOTE: Terraform does not manage the lifecycle of the Kubernetes clusters created by Cluster API; it only sets up infra + bootstraps provider components via `local-exec`.
 
+## Quick Multi‑Provider Enable (All Four)
+Minimal end‑to‑end steps to stand up Azure, AWS, GCP and Linode providers locally + CI:
+1. Create / configure cloud identities:
+	- Azure: App Registration (no client secret needed when using GitHub OIDC federated credential) with Contributor (or least‑priv) on target subscription.
+	- AWS: IAM Role with trust to `token.actions.githubusercontent.com` subject `repo:OWNER/REPO:ref:refs/heads/main` and policy allowing VPC, EC2, IAM PassRole (scoped), ELB, AutoScaling (adjust least‑priv later).
+	- GCP: Workload Identity Pool + OIDC Provider + Service Account with `roles/compute.admin` + `roles/iam.serviceAccountUser`, binding for repository attribute.
+	- Linode: Personal Access Token with required scopes (linodes:read/write, sshkeys:read/write as needed).
+2. Add GitHub Secrets:
+	- Azure: `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` (no secret).
+	- AWS: `AWS_OIDC_ROLE_ARN`.
+	- GCP: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT_EMAIL`, `GCP_PROJECT_ID`.
+	- Linode: `LINODE_TOKEN`.
+3. (Optional) Choose remote backend: copy a sample from `infra/backends/*` to `backend.tf` and edit names; then `terraform init -migrate-state`.
+4. Local: copy `.env.example` -> `.env`, set values, export env (or `source .env`), then:
+```
+terraform init
+terraform apply -auto-approve \
+  -var="enable_azure=true" \
+  -var="enable_aws=true" \
+  -var="enable_gcp=true" \
+  -var="enable_linode=true" \
+  -var="bootstrap_kind=true"
+```
+5. Verify provider controllers:
+```
+kubectl get pods -A | grep -E 'capi|infrastructure'
+```
+6. (Optional) Create sample workload clusters (one at a time to limit quota):
+```
+clusterctl generate cluster az-demo  --infrastructure=azure  | kubectl apply -f -
+clusterctl generate cluster aws-demo --infrastructure=aws    | kubectl apply -f -
+clusterctl generate cluster gcp-demo --infrastructure=gcp    | kubectl apply -f -
+clusterctl generate cluster linode-demo --infrastructure=linode | kubectl apply -f - || echo "Verify Linode provider name if this fails"
+```
+7. CI: workflow already enables all four via env toggles (see `terraform.yml`). Ensure secrets exist; on merge to `main` it will plan + apply with kind bootstrap.
+
+That is the complete fast path; harden next with least‑priv IAM, remote state, policy scanning (tflint/tfsec), and secret management.
+
+### Optional Automation Flags
+- `auto_workload_examples=true` will create one demo workload cluster per enabled provider (names: az-demo, aws-demo, gcp-demo, linode-demo) during apply. Disable for production.
+
+### Least Privilege Policy Skeletons
+See `policies/` directory for starter examples:
+- `aws_least_privilege_example.json`
+- `azure_role_definition_example.json`
+- `gcp_least_privilege_bindings.txt`
+
+Refine & scope these before production use (they are broad starting points).
+
 ## High-Level Flow
 1. (Optional) Create local kind cluster.
 2. Select target cloud(s) via variables.
 3. Terraform provisions infra.
 4. Terraform runs `clusterctl init` with requested providers (including Linode if enabled: provider name may differ until upstream stable).
-5. (Optional) Auto-generate workload cluster manifests (if `generate_workload_clusters=true`).
+5. Use generated environment exports & sample templates to create workload clusters.
 
 ## Requirements
 - Terraform >= 1.5
@@ -83,11 +132,7 @@ The apply step (if `bootstrap_kind=true`) will create a kind cluster and initial
 - Provider-specific credential variables (see each module README).
 
 ## Next
-If `generate_workload_clusters=true`, Terraform will place rendered workload cluster manifests under `artifacts/` (one per enabled provider). Apply manually, e.g.:
-```
-kubectl apply -f artifacts/demo-azure-cluster.yaml
-```
-Or generate on demand (Azure example):
+After infra + provider init, create workload cluster, e.g. for Azure:
 ```
 clusterctl generate cluster az-demo --infrastructure=azure | kubectl apply -f -
 ```

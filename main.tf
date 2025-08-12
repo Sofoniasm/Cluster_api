@@ -110,77 +110,20 @@ EOT
   }
 }
 
-# Workload cluster manifest generation per provider (optional)
-resource "null_resource" "gen_cluster_azure" {
-  count = var.enable_azure && var.generate_workload_clusters ? 1 : 0
-  depends_on = [null_resource.clusterctl_init_azure]
+# Optional: automatically create small sample workload clusters (one per enabled provider)
+resource "null_resource" "sample_workloads" {
+  count = var.auto_workload_examples ? 1 : 0
+  depends_on = [null_resource.clusterctl_init_azure, null_resource.clusterctl_init_aws, null_resource.clusterctl_init_gcp, null_resource.clusterctl_init_linode]
   provisioner "local-exec" {
     command = <<EOT
 set -e
-mkdir -p artifacts
-clusterctl generate cluster ${var.workload_name_prefix}-az \
-  --infrastructure=azure \
-  --control-plane-machine-count=${var.control_plane_machine_count} \
-  --worker-machine-count=${var.worker_machine_count} > artifacts/${var.workload_name_prefix}-azure-cluster.yaml
+kubectl cluster-info >/dev/null 2>&1 || { echo "Kubeconfig invalid"; exit 1; }
+if [ "${var.enable_azure}" = "true" ]; then clusterctl generate cluster az-demo --infrastructure=azure | kubectl apply -f - || true; fi
+if [ "${var.enable_aws}" = "true" ]; then clusterctl generate cluster aws-demo --infrastructure=aws | kubectl apply -f - || true; fi
+if [ "${var.enable_gcp}" = "true" ]; then clusterctl generate cluster gcp-demo --infrastructure=gcp | kubectl apply -f - || true; fi
+if [ "${var.enable_linode}" = "true" ]; then clusterctl generate cluster linode-demo --infrastructure=linode | kubectl apply -f - || true; fi
 EOT
     interpreter = ["bash", "-c"]
-  }
-}
-
-resource "null_resource" "gen_cluster_aws" {
-  count = var.enable_aws && var.generate_workload_clusters ? 1 : 0
-  depends_on = [null_resource.clusterctl_init_aws]
-  provisioner "local-exec" {
-    command = <<EOT
-set -e
-mkdir -p artifacts
-clusterctl generate cluster ${var.workload_name_prefix}-aws \
-  --infrastructure=aws \
-  --control-plane-machine-count=${var.control_plane_machine_count} \
-  --worker-machine-count=${var.worker_machine_count} > artifacts/${var.workload_name_prefix}-aws-cluster.yaml
-EOT
-    interpreter = ["bash", "-c"]
-  }
-}
-
-resource "null_resource" "gen_cluster_gcp" {
-  count = var.enable_gcp && var.generate_workload_clusters ? 1 : 0
-  depends_on = [null_resource.clusterctl_init_gcp]
-  provisioner "local-exec" {
-    command = <<EOT
-set -e
-mkdir -p artifacts
-clusterctl generate cluster ${var.workload_name_prefix}-gcp \
-  --infrastructure=gcp \
-  --control-plane-machine-count=${var.control_plane_machine_count} \
-  --worker-machine-count=${var.worker_machine_count} > artifacts/${var.workload_name_prefix}-gcp-cluster.yaml
-EOT
-    interpreter = ["bash", "-c"]
-  }
-}
-
-resource "null_resource" "gen_cluster_linode" {
-  count = var.enable_linode && var.generate_workload_clusters ? 1 : 0
-  depends_on = [null_resource.clusterctl_init_linode]
-  provisioner "local-exec" {
-    command = <<EOT
-set -e
-mkdir -p artifacts
-clusterctl generate cluster ${var.workload_name_prefix}-linode \
-  --infrastructure=linode \
-  --control-plane-machine-count=${var.control_plane_machine_count} \
-  --worker-machine-count=${var.worker_machine_count} > artifacts/${var.workload_name_prefix}-linode-cluster.yaml || echo "Linode generation skipped (provider maybe experimental)"
-EOT
-    interpreter = ["bash", "-c"]
-  }
-}
-
-output "workload_manifests" {
-  value = {
-    azure  = var.enable_azure  && var.generate_workload_clusters ? "artifacts/${var.workload_name_prefix}-azure-cluster.yaml" : null
-    aws    = var.enable_aws    && var.generate_workload_clusters ? "artifacts/${var.workload_name_prefix}-aws-cluster.yaml" : null
-    gcp    = var.enable_gcp    && var.generate_workload_clusters ? "artifacts/${var.workload_name_prefix}-gcp-cluster.yaml" : null
-    linode = var.enable_linode && var.generate_workload_clusters ? "artifacts/${var.workload_name_prefix}-linode-cluster.yaml" : null
   }
 }
 output "azure_enabled" { value = var.enable_azure }
