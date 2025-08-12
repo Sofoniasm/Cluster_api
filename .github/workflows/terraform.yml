@@ -34,8 +34,8 @@ jobs:
       ENABLE_AZURE: true
       ENABLE_AWS: true
       ENABLE_GCP: true
-      ENABLE_LINODE: false
-      BOOTSTRAP_KIND: false
+  ENABLE_LINODE: true
+  BOOTSTRAP_KIND: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,8 +73,20 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT }}
 
+      - name: Install clusterctl
+        run: |
+          curl -L https://github.com/kubernetes-sigs/cluster-api/releases/latest/download/clusterctl-linux-amd64 -o clusterctl
+          chmod +x clusterctl
+          sudo mv clusterctl /usr/local/bin/
+
       - name: Terraform Init
         run: terraform init -input=false
+
+      - name: Create kind cluster (if requested)
+        if: env.BOOTSTRAP_KIND == 'true'
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: capi-mgmt
 
       - name: Terraform Format
         run: terraform fmt -check
@@ -126,8 +138,8 @@ jobs:
       ENABLE_AZURE: true
       ENABLE_AWS: true
       ENABLE_GCP: true
-      ENABLE_LINODE: false
-      BOOTSTRAP_KIND: false
+  ENABLE_LINODE: true
+  BOOTSTRAP_KIND: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -159,8 +171,20 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT }}
+      - name: Install clusterctl
+        run: |
+          curl -L https://github.com/kubernetes-sigs/cluster-api/releases/latest/download/clusterctl-linux-amd64 -o clusterctl
+          chmod +x clusterctl
+          sudo mv clusterctl /usr/local/bin/
+
       - name: Terraform Init
         run: terraform init -input=false
+
+      - name: Create kind cluster (if requested)
+        if: env.BOOTSTRAP_KIND == 'true'
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: capi-mgmt
       - name: Download Plan (optional consistency)
         uses: actions/download-artifact@v4
         with:
