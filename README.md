@@ -90,3 +90,20 @@ clusterctl generate cluster az-demo --infrastructure=azure | kubectl apply -f -
 
 ## Disclaimer
 This is a scaffold. Harden for production: remote state backend, state locking, secrets management (avoid plain text vars), least-priv IAM, tagging, logging.
+
+## CI/CD (GitHub Actions)
+Workflow `.github/workflows/terraform.yml` runs plan on PR and apply on main using OIDC:
+- Azure: azure/login with federated credentials (no client secret required)
+- AWS: assumes role via `AWS_OIDC_ROLE_ARN` secret
+- GCP: Workload Identity Federation (provider + service account email secrets)
+- Linode: `LINODE_TOKEN` secret (currently disabled by default in CI)
+
+Required GitHub Secrets:
+- `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`
+- `AWS_OIDC_ROLE_ARN`
+- `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT_EMAIL`, `GCP_PROJECT_ID`
+- `LINODE_TOKEN` (optional)
+
+Enable Linode in CI by setting env `ENABLE_LINODE: true` (modify workflow or add an override step).
+
+Add a remote backend (e.g., Azure Storage / S3 / GCS) before relying on multi-user applies.
