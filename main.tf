@@ -113,3 +113,55 @@ output "azure_enabled" { value = var.enable_azure }
 output "aws_enabled" { value = var.enable_aws }
 output "gcp_enabled" { value = var.enable_gcp }
 output "linode_enabled" { value = var.enable_linode }
+
+# Optional automated workload cluster generation (manifests only)
+resource "null_resource" "workload_cluster_azure" {
+  count = var.auto_create_workload_clusters && var.enable_azure ? 1 : 0
+  depends_on = [null_resource.clusterctl_init_azure]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+clusterctl generate cluster ${var.workload_cluster_name_prefix}-az --infrastructure=azure > ${var.workload_cluster_name_prefix}-azure-cluster.yaml
+echo "Azure workload cluster manifest written." 
+EOT
+    interpreter = ["bash","-c"]
+  }
+}
+
+resource "null_resource" "workload_cluster_aws" {
+  count = var.auto_create_workload_clusters && var.enable_aws ? 1 : 0
+  depends_on = [null_resource.clusterctl_init_aws]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+clusterctl generate cluster ${var.workload_cluster_name_prefix}-aws --infrastructure=aws > ${var.workload_cluster_name_prefix}-aws-cluster.yaml
+echo "AWS workload cluster manifest written." 
+EOT
+    interpreter = ["bash","-c"]
+  }
+}
+
+resource "null_resource" "workload_cluster_gcp" {
+  count = var.auto_create_workload_clusters && var.enable_gcp ? 1 : 0
+  depends_on = [null_resource.clusterctl_init_gcp]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+clusterctl generate cluster ${var.workload_cluster_name_prefix}-gcp --infrastructure=gcp > ${var.workload_cluster_name_prefix}-gcp-cluster.yaml
+echo "GCP workload cluster manifest written." 
+EOT
+    interpreter = ["bash","-c"]
+  }
+}
+
+resource "null_resource" "workload_cluster_linode" {
+  count = var.auto_create_workload_clusters && var.enable_linode ? 1 : 0
+  depends_on = [null_resource.clusterctl_init_linode]
+  provisioner "local-exec" {
+    command = <<EOT
+set -e
+clusterctl generate cluster ${var.workload_cluster_name_prefix}-linode --infrastructure=linode > ${var.workload_cluster_name_prefix}-linode-cluster.yaml || echo "Linode cluster generation attempted (provider may be experimental)."
+EOT
+    interpreter = ["bash","-c"]
+  }
+}

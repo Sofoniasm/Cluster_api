@@ -81,6 +81,8 @@ The apply step (if `bootstrap_kind=true`) will create a kind cluster and initial
 - `bootstrap_kind` (bool) - create local kind mgmt cluster.
 - `enable_azure`, `enable_aws`, `enable_gcp`, `enable_linode` (bool) - toggle cloud modules.
 - Provider-specific credential variables (see each module README).
+- `auto_create_workload_clusters` (bool) - if true, generates (does not apply) workload cluster manifests for each enabled provider.
+- `workload_cluster_name_prefix` (string) - prefix for generated workload cluster names.
 
 ## Next
 After infra + provider init, create workload cluster, e.g. for Azure:
