@@ -17,7 +17,7 @@ A separate `kind` local bootstrap (optional) can create a local kind cluster as 
 2. Select target cloud(s) via variables.
 3. Terraform provisions infra.
 4. Terraform runs `clusterctl init` with requested providers (including Linode if enabled: provider name may differ until upstream stable).
-5. Use generated environment exports & sample templates to create workload clusters.
+5. (Optional) Auto-generate workload cluster manifests (if `generate_workload_clusters=true`).
 
 ## Requirements
 - Terraform >= 1.5
@@ -81,11 +81,13 @@ The apply step (if `bootstrap_kind=true`) will create a kind cluster and initial
 - `bootstrap_kind` (bool) - create local kind mgmt cluster.
 - `enable_azure`, `enable_aws`, `enable_gcp`, `enable_linode` (bool) - toggle cloud modules.
 - Provider-specific credential variables (see each module README).
-- `auto_create_workload_clusters` (bool) - if true, generates (does not apply) workload cluster manifests for each enabled provider.
-- `workload_cluster_name_prefix` (string) - prefix for generated workload cluster names.
 
 ## Next
-After infra + provider init, create workload cluster, e.g. for Azure:
+If `generate_workload_clusters=true`, Terraform will place rendered workload cluster manifests under `artifacts/` (one per enabled provider). Apply manually, e.g.:
+```
+kubectl apply -f artifacts/demo-azure-cluster.yaml
+```
+Or generate on demand (Azure example):
 ```
 clusterctl generate cluster az-demo --infrastructure=azure | kubectl apply -f -
 ```

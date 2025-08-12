@@ -26,6 +26,8 @@ variable "linode_region" { default = "us-east" }
 variable "linode_label_prefix" { default = "capi" }
 variable "linode_ssh_public_key" { default = "" }
 
-# Workload cluster automation
-variable "auto_create_workload_clusters" { default = false }
-variable "workload_cluster_name_prefix" { default = "demo" }
+# Workload cluster generation
+variable "generate_workload_clusters" { default = true }
+variable "workload_name_prefix" { default = "demo" }
+variable "control_plane_machine_count" { default = 1 }
+variable "worker_machine_count" { default = 2 }
