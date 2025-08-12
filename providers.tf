@@ -7,6 +7,7 @@ terraform {
     random  = { source = "hashicorp/random" version = ">=3.5" }
     local   = { source = "hashicorp/local"  version = ">=2.4" }
     null    = { source = "hashicorp/null"   version = ">=3.2" }
+  linode  = { source = "linode/linode" version = ">=2.30" }
   }
 }
 
@@ -23,4 +24,8 @@ provider "aws" {
 provider "google" {
   project = var.gcp_project
   region  = var.gcp_region
+}
+
+provider "linode" {
+  # LINODE_TOKEN env var should be set. Region specified in module.
 }

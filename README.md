@@ -1,11 +1,12 @@
 # Multi-Cloud Cluster API Terraform Scaffold
 
-This repo provides a modular Terraform setup to provision infrastructure prerequisites for Cluster API (CAPI) management + workload clusters across Azure (CAPZ), AWS (CAPA), and GCP (CAPG). It focuses on infra primitives (networking, IAM, key vaults, service accounts) and helper local-exec steps to run `clusterctl` for initializing CAPI providers.
+This repo provides a modular Terraform setup to provision infrastructure prerequisites for Cluster API (CAPI) management + workload clusters across Azure (CAPZ), AWS (CAPA), GCP (CAPG), and Linode/Akamai (experimental). It focuses on infra primitives (networking, IAM, key vaults, service accounts) and helper local-exec steps to run `clusterctl` for initializing CAPI providers.
 
 ## Modules
-- `modules/azure`: Resource group, VNet, subnet, identity prerequisites, optional Azure Blob (for cluster templates), outputs for CAPZ variables.
-- `modules/aws`: VPC, subnets, IAM roles & policies for CAPA controller, key pair, outputs.
-- `modules/gcp`: VPC, subnets, service accounts & IAM roles for CAPG controller, outputs.
+- `modules/azure`: Resource group, VNet, subnet.
+- `modules/aws`: VPC, subnet (scaffold; extend with IAM for production).
+- `modules/gcp`: VPC, subnet (scaffold).
+- `modules/linode`: Tag + optional SSH key registration (Akamai/Linode experimental support).
 
 A separate `kind` local bootstrap (optional) can create a local kind cluster as the initial management cluster, then run `clusterctl init --infrastructure <provider>`.
 
@@ -15,7 +16,7 @@ A separate `kind` local bootstrap (optional) can create a local kind cluster as 
 1. (Optional) Create local kind cluster.
 2. Select target cloud(s) via variables.
 3. Terraform provisions infra.
-4. Terraform runs `clusterctl init` with requested providers.
+4. Terraform runs `clusterctl init` with requested providers (including Linode if enabled: provider name may differ until upstream stable).
 5. Use generated environment exports & sample templates to create workload clusters.
 
 ## Requirements
@@ -49,6 +50,14 @@ powershell -ExecutionPolicy Bypass -File scripts/login_all.ps1
 
 You should see Azure/AWS/GCP OK lines for each configured set of credentials.
 
+For Linode/Akamai add to `.env` (or export) before login script:
+```
+LINODE_TOKEN=your_personal_access_token
+LINODE_REGION=us-east
+LINODE_SSH_PUBLIC_KEY="ssh-ed25519 AAAA... user@example"
+```
+The Terraform module consumes linode_region / linode_ssh_public_key variables. The provider reads LINODE_TOKEN.
+
 ### Terraform init & apply (all providers)
 Option A: via variables flags
 ```
@@ -57,6 +66,7 @@ terraform apply -auto-approve \
 	-var="enable_azure=true" \
 	-var="enable_aws=true" \
 	-var="enable_gcp=true" \
+	-var="enable_linode=true" \
 	-var="bootstrap_kind=true"
 ```
 
@@ -69,7 +79,7 @@ The apply step (if `bootstrap_kind=true`) will create a kind cluster and initial
 
 ## Variables (root)
 - `bootstrap_kind` (bool) - create local kind mgmt cluster.
-- `enable_azure`, `enable_aws`, `enable_gcp` (bool) - toggle cloud modules.
+- `enable_azure`, `enable_aws`, `enable_gcp`, `enable_linode` (bool) - toggle cloud modules.
 - Provider-specific credential variables (see each module README).
 
 ## Next
